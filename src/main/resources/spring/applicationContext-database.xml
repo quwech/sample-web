@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:ctx="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <ctx:property-placeholder location="classpath:database-config.properties" ignore-unresolvable="true"/>
+    <ctx:property-placeholder location="classpath:redis-config.properties" ignore-unresolvable="true"/>
+
+    <!--微信数据源-->
+    <bean id="wxDataSource" class="org.apache.commons.dbcp2.BasicDataSource" destroy-method="close">
+        <property name="driverClassName" value="${wx.driver}"/>
+        <property name="url" value="${wx.url}"/>
+        <property name="username" value="${wx.username}"/>
+        <property name="password" value="${wx.password}"/>
+
+        <!--初始化连接数-->
+        <property name="initialSize" value="5"/>
+        <!--最大空闲连接-->
+        <property name="maxIdle" value="10"/>
+        <!--最小空闲连接-->
+        <property name="minIdle" value="5"/>
+    </bean>
+
+    <bean id="wxSqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="wxDataSource"/>
+        <property name="mapperLocations" value="classpath:mybatis/**/*.xml"/>
+        <property name="configLocation" value="classpath:spring/mybatis-config.xml"/>
+        <property name="typeAliasesPackage" value="com.qwc.sample.web.model"/>
+    </bean>
+
+    <bean id="wxTransactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="wxDataSource"/>
+    </bean>
+
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="sqlSessionFactoryBeanName" value="wxSqlSessionFactory"/>
+        <property name="basePackage" value="com.qwc.sample.web.dao"/>
+    </bean>
+
+    <!--jedis pool配置-->
+    <bean id="jedisPoolConfig" class="redis.clients.jedis.JedisPoolConfig">
+        <property name="maxTotal" value="${redis.maxTotal}"/>
+        <property name="maxIdle" value="${redis.maxIdle}"/>
+        <property name="maxWaitMillis" value="${redis.maxWaitMillis}"/>
+        <property name="testOnBorrow" value="${redis.testOnBorrow}"/>
+        <property name="testOnReturn" value="${redis.testOnReturn}"/>
+    </bean>
+
+    <bean id="jedisPool" class="redis.clients.jedis.JedisPool" destroy-method="close">
+        <constructor-arg index="0" ref="jedisPoolConfig"/>
+        <constructor-arg index="1" value="${redis.hostname}"/>
+        <constructor-arg index="2" value="${redis.port}"/>
+    </bean>
+</beans>
